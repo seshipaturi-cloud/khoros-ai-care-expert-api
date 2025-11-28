@@ -37,4 +37,4 @@ kafka-python==2.0.2
 firecrawl-py==4.3.6
 Pillow==10.4.0
 pytesseract==0.3.13
-yt-dlp==2025.11.19
+yt-dlp==2024.12.13
