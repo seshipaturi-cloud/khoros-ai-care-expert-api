@@ -1,0 +1,274 @@
+# ============================================
+# Python
+# ============================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Logs
+*.log
+local_settings.py
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ============================================
+# Virtual Environments
+# ============================================
+.env
+.env.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ============================================
+# IDEs and Editors
+# ============================================
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================
+# Operating Systems
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ============================================
+# FastAPI / Web Application Specific
+# ============================================
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+*.db
+
+# MongoDB
+*.lock
+mongod.lock
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Uploaded files (if stored locally)
+uploads/
+media/
+static/files/
+
+# ============================================
+# AWS & Cloud
+# ============================================
+
+# AWS credentials
+.aws/
+aws-credentials.json
+
+# ============================================
+# Security & Secrets
+# ============================================
+
+# Environment variables (sensitive)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+
+# Keep example files
+!.env.example
+!.env.kafka.example
+
+# SSH Keys
+*.pem
+*.key
+*.cer
+*.crt
+id_rsa
+id_dsa
+
+# API Keys and secrets
+secrets.json
+credentials.json
+*.secret
+
+# ============================================
+# Testing & CI/CD
+# ============================================
+
+# Test databases
+test_*.db
+*.test.db
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# ============================================
+# Temporary Development Files
+# ============================================
+
+# Script outputs
+*.out
+output/
+logs/
+
+# Backup files
+*.backup
+*.old
+
+# ============================================
+# Project Specific
+# ============================================
+
+# Temporary frontend build (if applicable)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Temporary data files
+*.csv
+*.xlsx
+*.json.backup
+
+# Cache directories
+.cache/
+.temp/
+
+# Debug files
+debug.log
+error.log

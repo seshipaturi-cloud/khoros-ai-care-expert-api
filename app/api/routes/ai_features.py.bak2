@@ -1,0 +1,395 @@
+"""
+AI Features API Routes
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import List, Optional
+from app.models.ai_feature import (
+    AIFeatureCreate,
+    AIFeatureUpdate,
+    AIFeatureResponse,
+    AIFeatureListResponse,
+    AIFeatureStats,
+    FeatureStatus,
+    FeatureType
+)
+from app.services.ai_feature_service import ai_feature_service
+from app.api.middleware.auth import get_current_user
+import logging
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/ai-features", tags=["ai-features"])
+
+
+@router.post("/", response_model=AIFeatureResponse, status_code=status.HTTP_201_CREATED)
+async def create_feature(
+    feature_data: AIFeatureCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new AI feature"""
+    try:
+        user_role = current_user.get("role") if isinstance(current_user, dict) else getattr(current_user, 'role', None)
+        user_company_id = current_user.get("company_id") if isinstance(current_user, dict) else getattr(current_user, 'company_id', None)
+
+        # Check permissions
+        if user_role not in ["super_admin", "company_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions to create AI features"
+            )
+
+        # If company_admin, automatically set company_id
+        if user_role == "company_admin" and user_company_id:
+            feature_data.company_id = user_company_id
+
+        # Validate company_id matches user's company (unless super_admin)
+        if user_role != "super_admin" and feature_data.company_id != user_company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Can only create features for your company"
+            )
+
+        feature = await ai_feature_service.create_feature(
+            feature_data,
+            created_by=current_user.get("id", "system") if isinstance(current_user, dict) else getattr(current_user, 'id', 'system')
+        )
+        return feature
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error creating AI feature: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create AI feature"
+        )
+
+
+@router.get("/", response_model=AIFeatureListResponse)
+async def list_features(
+    company_id: Optional[str] = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    feature_type: Optional[FeatureType] = None,
+    feature_status: Optional[FeatureStatus] = None,
+    enabled: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """List AI features with pagination"""
+    try:
+        user_role = current_user.get("role") if isinstance(current_user, dict) else getattr(current_user, 'role', None)
+        user_company_id = current_user.get("company_id") if isinstance(current_user, dict) else getattr(current_user, 'company_id', None)
+
+        # If not super admin, filter by user's company
+        if user_role != "super_admin":
+            company_id = user_company_id
+
+        result = await ai_feature_service.list_features(
+            company_id=company_id,
+            page=page,
+            page_size=page_size,
+            feature_type=feature_type,
+            status=feature_status,
+            enabled=enabled
+        )
+        return result
+
+    except Exception as e:
+        logger.error(f"Error listing AI features: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list AI features"
+        )
+
+
+@router.get("/company/{company_id}", response_model=List[AIFeatureResponse])
+async def get_features_by_company(
+    company_id: str,
+    include_inactive: bool = Query(default=False),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all features for a company"""
+    try:
+        user_role = current_user.get("role") if isinstance(current_user, dict) else getattr(current_user, 'role', None)
+        user_company_id = current_user.get("company_id") if isinstance(current_user, dict) else getattr(current_user, 'company_id', None)
+
+        # Check permissions
+        if user_role != "super_admin" and company_id != user_company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this company's features"
+            )
+
+        features = await ai_feature_service.get_features_by_company(
+            company_id,
+            include_inactive=include_inactive
+        )
+        return features
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting features by company: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get features"
+        )
+
+
+@router.get("/{feature_id}", response_model=AIFeatureResponse)
+async def get_feature(
+    feature_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get an AI feature by ID"""
+    try:
+        feature = await ai_feature_service.get_feature(feature_id)
+
+        if not feature:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        # Check permissions
+        user_role = current_user.get("role") if isinstance(current_user, dict) else getattr(current_user, 'role', None)
+        user_company_id = current_user.get("company_id") if isinstance(current_user, dict) else getattr(current_user, 'company_id', None)
+
+        if user_role != "super_admin" and feature.company_id != user_company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this feature"
+            )
+
+        return feature
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting feature: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get feature"
+        )
+
+
+@router.put("/{feature_id}", response_model=AIFeatureResponse)
+async def update_feature(
+    feature_id: str,
+    feature_data: AIFeatureUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an AI feature"""
+    try:
+        # Get existing feature to check permissions
+        existing = await ai_feature_service.get_feature(feature_id)
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        user_role = current_user.get("role") if isinstance(current_user, dict) else getattr(current_user, 'role', None)
+        user_company_id = current_user.get("company_id") if isinstance(current_user, dict) else getattr(current_user, 'company_id', None)
+
+        # Check permissions
+        if user_role not in ["super_admin", "company_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions to update features"
+            )
+
+        if user_role != "super_admin" and existing.company_id != user_company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Can only update features for your company"
+            )
+
+        feature = await ai_feature_service.update_feature(
+            feature_id,
+            feature_data,
+            updated_by=current_user.get("id", "system") if isinstance(current_user, dict) else getattr(current_user, 'id', 'system')
+        )
+
+        if not feature:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        return feature
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating feature: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update feature"
+        )
+
+
+@router.delete("/{feature_id}")
+async def delete_feature(
+    feature_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete an AI feature"""
+    try:
+        # Get existing feature to check permissions
+        existing = await ai_feature_service.get_feature(feature_id)
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        user_role = current_user.get("role") if isinstance(current_user, dict) else getattr(current_user, 'role', None)
+        user_company_id = current_user.get("company_id") if isinstance(current_user, dict) else getattr(current_user, 'company_id', None)
+
+        # Check permissions
+        if user_role not in ["super_admin", "company_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions to delete features"
+            )
+
+        if user_role != "super_admin" and existing.company_id != user_company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Can only delete features for your company"
+            )
+
+        success = await ai_feature_service.delete_feature(feature_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        return {"message": "Feature deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting feature: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete feature"
+        )
+
+
+@router.post("/{feature_id}/toggle", response_model=AIFeatureResponse)
+async def toggle_feature(
+    feature_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Toggle feature enabled/disabled status"""
+    try:
+        # Check permissions (same as update)
+        existing = await ai_feature_service.get_feature(feature_id)
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        user_role = current_user.get("role") if isinstance(current_user, dict) else getattr(current_user, 'role', None)
+        user_company_id = current_user.get("company_id") if isinstance(current_user, dict) else getattr(current_user, 'company_id', None)
+
+        if user_role not in ["super_admin", "company_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+
+        if user_role != "super_admin" and existing.company_id != user_company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+
+        feature = await ai_feature_service.toggle_feature(feature_id)
+
+        if not feature:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        return feature
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling feature: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to toggle feature"
+        )
+
+
+@router.get("/{feature_id}/stats", response_model=AIFeatureStats)
+async def get_feature_stats(
+    feature_id: str,
+    period: str = Query(default="monthly", regex="^(hourly|daily|weekly|monthly)$"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get feature statistics"""
+    try:
+        stats = await ai_feature_service.get_feature_stats(feature_id, period)
+
+        if not stats:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Feature not found"
+            )
+
+        return stats
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting feature stats: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get feature stats"
+        )
+
+
+@router.post("/{feature_id}/log-usage")
+async def log_feature_usage(
+    feature_id: str,
+    success: bool,
+    processing_time_ms: float,
+    accuracy_score: Optional[float] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Log feature usage for statistics tracking"""
+    try:
+        logged = await ai_feature_service.log_feature_usage(
+            feature_id,
+            success,
+            processing_time_ms,
+            accuracy_score
+        )
+
+        if not logged:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to log usage"
+            )
+
+        return {"message": "Usage logged successfully"}
+
+    except Exception as e:
+        logger.error(f"Error logging feature usage: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to log usage"
+        )

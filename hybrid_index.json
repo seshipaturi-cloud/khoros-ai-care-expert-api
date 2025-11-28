@@ -1,0 +1,32 @@
+{
+  "name": "kb_hybrid_index",
+  "type": "search",
+  "definition": {
+    "mappings": {
+      "dynamic": false,
+      "fields": {
+        "title": {
+          "type": "string",
+          "analyzer": "lucene.standard"
+        },
+        "description": {
+          "type": "string",
+          "analyzer": "lucene.standard"
+        },
+        "indexed_content": {
+          "type": "string",
+          "analyzer": "lucene.standard"
+        },
+        "company_id": {
+          "type": "string"
+        },
+        "brand_ids": {
+          "type": "string"
+        },
+        "ai_agent_ids": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

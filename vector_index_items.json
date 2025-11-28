@@ -1,0 +1,14 @@
+{
+  "name": "kb_index",
+  "type": "vectorSearch",
+  "definition": {
+    "fields": [
+      {
+        "path": "embeddings",
+        "dimensions": 384,
+        "similarity": "cosine",
+        "type": "vector"
+      }
+    ]
+  }
+}
