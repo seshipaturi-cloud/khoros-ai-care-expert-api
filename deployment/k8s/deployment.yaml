@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service
+  namespace: ai-care-expert
+  labels:
+    app: api-service
+    component: api
+    version: v1
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: api-service
+  template:
+    metadata:
+      labels:
+        app: api-service
+        component: api
+        version: v1
+    spec:
+      containers:
+      - name: api-service
+        image: 642760139656.dkr.ecr.us-west-2.amazonaws.com/care-demo/api-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8000"
+        - name: DEBUG
+          value: "false"
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: api-service-config
+              key: log-level
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: api-service-secrets
+              key: mongodb-uri
+        - name: MONGODB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: api-service-config
+              key: mongodb-database
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-service-secrets
+              key: openai-api-key
+              optional: true
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-service-secrets
+              key: anthropic-api-key
+              optional: true
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-service-secrets
+              key: jwt-secret-key
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: api-service-secrets
+              key: aws-access-key-id
+              optional: true
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-service-secrets
+              key: aws-secret-access-key
+              optional: true
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: api-service-config
+              key: aws-region
+        - name: S3_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: api-service-config
+              key: s3-bucket
+        - name: FIRECRAWL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-service-secrets
+              key: firecrawl-api-key
+              optional: true
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: api-service-config
+              key: cors-origins
+        - name: KAFKA_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: api-service-config
+              key: kafka-enabled
+              optional: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

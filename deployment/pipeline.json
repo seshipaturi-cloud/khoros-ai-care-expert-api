@@ -1,0 +1,99 @@
+{
+  "pipeline": {
+    "name": "care-demo-api-service-pipeline",
+    "roleArn": "arn:aws:iam::642760139656:role/ai-care-expert-codepipeline-role",
+    "artifactStore": {
+      "type": "S3",
+      "location": "care-demo-codepipeline-artifacts-us-west-2"
+    },
+    "stages": [
+      {
+        "name": "Source",
+        "actions": [
+          {
+            "name": "SourceAction",
+            "actionTypeId": {
+              "category": "Source",
+              "owner": "ThirdParty",
+              "provider": "GitHub",
+              "version": "1"
+            },
+            "runOrder": 1,
+            "configuration": {
+              "Branch": "main",
+              "OAuthToken": "GITHUB_OAUTH_TOKEN_PLACEHOLDER",
+              "Owner": "seshipaturi-cloud",
+              "PollForSourceChanges": "false",
+              "Repo": "khoros-ai-care-expert-api"
+            },
+            "outputArtifacts": [
+              {
+                "name": "SourceOutput"
+              }
+            ],
+            "inputArtifacts": []
+          }
+        ]
+      },
+      {
+        "name": "Build",
+        "actions": [
+          {
+            "name": "BuildAction",
+            "actionTypeId": {
+              "category": "Build",
+              "owner": "AWS",
+              "provider": "CodeBuild",
+              "version": "1"
+            },
+            "runOrder": 1,
+            "configuration": {
+              "ProjectName": "care-demo-api-service"
+            },
+            "outputArtifacts": [
+              {
+                "name": "BuildOutput"
+              }
+            ],
+            "inputArtifacts": [
+              {
+                "name": "SourceOutput"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Deploy",
+        "actions": [
+          {
+            "name": "DeployAction",
+            "actionTypeId": {
+              "category": "Build",
+              "owner": "AWS",
+              "provider": "CodeBuild",
+              "version": "1"
+            },
+            "runOrder": 1,
+            "configuration": {
+              "ProjectName": "care-demo-api-service-deploy",
+              "PrimarySource": "SourceOutput"
+            },
+            "outputArtifacts": [],
+            "inputArtifacts": [
+              {
+                "name": "SourceOutput"
+              },
+              {
+                "name": "BuildOutput"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "version": 1,
+    "executionMode": "SUPERSEDED",
+    "pipelineType": "V2"
+  }
+}

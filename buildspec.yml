@@ -1,0 +1,45 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - REPOSITORY_URI=642760139656.dkr.ecr.us-west-2.amazonaws.com/care-demo/api-service
+      - aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - BUILD_NUMBER=$CODEBUILD_BUILD_NUMBER
+      - echo "Image tag is $IMAGE_TAG"
+      - echo "Build number is $BUILD_NUMBER"
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build --no-cache -f deployment/Dockerfile -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$BUILD_NUMBER
+
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:$BUILD_NUMBER
+      - echo Writing image definitions file for deployment...
+      - printf '[{"name":"api-service","imageUri":"%s","buildNumber":"%s"}]' $REPOSITORY_URI:$BUILD_NUMBER $BUILD_NUMBER > imagedefinitions.json
+      - cat imagedefinitions.json
+      - echo Build and push completed successfully!
+
+artifacts:
+  files:
+    - imagedefinitions.json
+    - deployment/buildspec-deploy.yml
+    - deployment/k8s/**/*
+  name: api-service-build
+
+cache:
+  paths:
+    - '/root/.cache/pip/**/*'

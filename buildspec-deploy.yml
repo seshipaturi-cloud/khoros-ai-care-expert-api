@@ -1,0 +1,51 @@
+version: 0.2
+
+# This buildspec is for the DEPLOY stage only
+# It receives the imagedefinitions.json artifact from the BUILD stage
+
+phases:
+  pre_build:
+    commands:
+      - echo Deployment started on `date`
+      - echo Installing kubectl...
+      - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      - chmod +x kubectl
+      - mv kubectl /usr/local/bin/
+      - kubectl version --client
+      - echo Configuring kubectl for EKS cluster...
+      - aws eks update-kubeconfig --region us-west-2 --name care-demo-qa-001
+      - kubectl config current-context
+
+  build:
+    commands:
+      - echo "Reading image from artifact..."
+      - IMAGE_URI=$(cat $CODEBUILD_SRC_DIR_BuildOutput/imagedefinitions.json | jq -r '.[0].imageUri')
+      - BUILD_NUMBER=$(cat $CODEBUILD_SRC_DIR_BuildOutput/imagedefinitions.json | jq -r '.[0].buildNumber')
+      - echo "Deploying image $IMAGE_URI"
+      - echo "Build number $BUILD_NUMBER"
+      - echo "Dynamically updating deployment.yaml with build number"
+      - >
+        sed -i "s|image: 642760139656.dkr.ecr.us-west-2.amazonaws.com/care-demo/api-service:.*|image: $IMAGE_URI|g" deployment/k8s/deployment.yaml
+      - echo "Updated deployment.yaml"
+      - grep "image" deployment/k8s/deployment.yaml
+      - echo "Applying Kubernetes manifests..."
+      - kubectl apply -f deployment/k8s/configmap.yaml
+      - kubectl apply -f deployment/k8s/service.yaml
+      - kubectl apply -f deployment/k8s/hpa.yaml
+      - kubectl apply -f deployment/k8s/deployment.yaml
+      - echo "Waiting for rollout to complete..."
+      - kubectl rollout status deployment/api-service -n ai-care-expert --timeout=5m
+
+  post_build:
+    commands:
+      - echo Deployment completed on `date`
+      - echo Verifying deployment...
+      - kubectl get pods -n ai-care-expert -l app=api-service
+      - kubectl get svc api-service -n ai-care-expert
+      - echo Checking pod health...
+      - kubectl get pods -n ai-care-expert -l app=api-service -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}'
+      - echo Deployment successful!
+
+artifacts:
+  files:
+    - imagedefinitions.json

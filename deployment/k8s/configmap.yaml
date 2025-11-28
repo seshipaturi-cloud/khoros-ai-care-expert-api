@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-service-config
+  namespace: ai-care-expert
+  labels:
+    app: api-service
+    component: api
+data:
+  log-level: "info"
+  mongodb-database: "khoros_care"
+  aws-region: "us-west-2"
+  s3-bucket: "khoros-knowledge-base"
+  cors-origins: "*"
+  kafka-enabled: "false"
