@@ -21,9 +21,11 @@ FROM public.ecr.aws/docker/library/python:3.11-slim
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
+    tesseract-ocr \
+    libtesseract-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -42,8 +44,9 @@ COPY main.py .
 # Make sure scripts are executable
 ENV PATH=/home/appuser/.local/bin:$PATH
 
-# Change ownership to non-root user
-RUN chown -R appuser:appuser /app
+# Create cache directories with proper permissions
+RUN mkdir -p /home/appuser/.cache/huggingface /home/appuser/.cache/torch && \
+    chown -R appuser:appuser /home/appuser /app
 
 # Switch to non-root user
 USER appuser
