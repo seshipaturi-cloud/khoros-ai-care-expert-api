@@ -8,7 +8,7 @@ metadata:
     component: api
     version: v1
 spec:
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate
