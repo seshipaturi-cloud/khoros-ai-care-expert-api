@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"  # Alias
     access_token_expire_minutes: int = 30
     
-    # CORS - Allow common development ports
-    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:7070,http://localhost:8000,http://localhost:8080,http://localhost:8081,http://localhost:5174"
+    # CORS - Allow common development ports and production ELB
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:7070,http://localhost:8000,http://localhost:8080,http://localhost:8081,http://localhost:5174,http://ac3c749e32cc5479583d5fc2b4360e97-127b53cf3f9c9c0e.elb.us-west-2.amazonaws.com,https://ac3c749e32cc5479583d5fc2b4360e97-127b53cf3f9c9c0e.elb.us-west-2.amazonaws.com"
     
     # AWS Configuration
     aws_access_key_id: str = ""

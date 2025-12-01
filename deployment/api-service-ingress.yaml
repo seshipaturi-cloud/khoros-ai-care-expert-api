@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-service-ingress
+  namespace: ai-care-expert
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: api-service.qa.ai-care-expert.usw2.khorostech.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 8000
+  # Also accessible via load balancer DNS
+  - host: ac3c749e32cc5479583d5fc2b4360e97-127b53cf3f9c9c0e.elb.us-west-2.amazonaws.com
+    http:
+      paths:
+      - path: /api-service
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 8000
+  tls:
+  - hosts:
+    - api-service.qa.ai-care-expert.usw2.khorostech.com
+    secretName: api-service-tls
